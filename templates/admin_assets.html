@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการครุภัณฑ์ - AI Smart IT Helpdesk</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style> body { font-family: 'Sarabun', sans-serif; } </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col">
+
+    <header class="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center">
+        <div>
+            <h1 class="text-lg font-bold flex items-center gap-2">📦 ระบบจัดการข้อมูลครุภัณฑ์ IT (ศาลจังหวัดเพชรบูรณ์)</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="/admin/export-assets-excel" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg transition font-semibold">📊 ส่งออก Excel</a>
+            <a href="/admin/knowledge-base" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition">📚 จัดการคู่มือ KB</a>
+            <a href="/admin/users" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition">👥 จัดการผู้ใช้</a>
+            <a href="/admin" class="text-xs bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg transition">⬅️ แดชบอร์ด</a>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- ฝั่งซ้าย: ฟอร์มเพิ่มครุภัณฑ์ -->
+            <div class="space-y-6">
+                <div class="bg-white p-5 rounded-xl shadow border border-slate-200">
+                    <h2 class="font-bold text-slate-800 text-sm border-b pb-2 mb-4">➕ เพิ่มครุภัณฑ์ใหม่ (Manual)</h2>
+                    <form id="addAssetForm" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">หมายเลขครุภัณฑ์ (Asset ID)</label>
+                            <input type="text" id="addAssetId" placeholder="เช่น 7440-001-0001/1" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่ออุปกรณ์ / ยี่ห้อรุ่น</label>
+                            <input type="text" id="addAssetName" placeholder="เช่น Dell OptiPlex 7090" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ชนิดอุปกรณ์</label>
+                            <select id="addCategory" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
+                                <option value="">-- เลือกชนิดอุปกรณ์ --</option>
+                                {% for c in categories %}
+                                    <option value="{{ c }}">{{ c }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">วันหมดอายุประกัน / ประกัน</label>
+                            <input type="text" id="addWarranty" placeholder="เช่น 2028-12-31 หรือ ประกัน 3 ปี" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสเครื่อง / Serial Number (S/N)</label>
+                            <input type="text" id="addSerialNumber" placeholder="ระบุ S/N เครื่อง..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">สถานที่ตั้ง / ห้อง</label>
+                            <select id="addRoom" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
+                                <option value="">-- เลือกห้องที่ตั้ง --</option>
+                                {% for r in rooms %}
+                                    <option value="{{ r }}">{{ r }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ผู้ถือครอง / รูปแบบการใช้งาน</label>
+                            <select id="addAssignedUser" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 bg-slate-50">
+                                <option value="">🏢 อุปกรณ์ส่วนกลางประจำห้อง (ทุกคนในห้องแจ้งซ่อมได้)</option>
+                                {% for u in users %}
+                                    <option value="{{ u.user_id }}">👤 {{ u.fullname }} ({{ u.position or u.user_id }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">สถานะอุปกรณ์</label>
+                            <select id="addStatus" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
+                                <option value="ปกติ">🟢 ปกติ (Ready)</option>
+                                <option value="ส่งซ่อม">🟡 ส่งซ่อม (Repairing)</option>
+                                <option value="ชำรุด">🔴 ชำรุด (Broken)</option>
+                                <option value="จำหน่าย">⚪ จำหน่ายออก (Decommissioned)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold transition mt-2">บันทึกข้อมูลครุภัณฑ์</button>
+                    </form>
+                </div>
+
+                <!-- กล่องอิมพอร์ต Excel -->
+                <div class="bg-white p-5 rounded-xl shadow border border-slate-200 border-t-4 border-t-emerald-500">
+                    <h2 class="font-bold text-slate-800 text-sm border-b pb-2 mb-2">📊 นำเข้าจากไฟล์ Excel (Bulk Import)</h2>
+                    <p class="text-xs text-slate-500 mb-4">คอลัมน์: A(รหัส), B(ชื่อ), C(ชนิด), D(ประกัน), E(S/N), F(สถานที่), G(สถานะ), H(รหัสผู้ใช้)</p>
+                    <form id="importForm" class="space-y-3">
+                        <input type="file" id="excelFile" accept=".xlsx, .xls" required class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-semibold transition">นำเข้าข้อมูล</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ฝั่งขวา: ตารางรายชื่อครุภัณฑ์ -->
+            <div class="md:col-span-2 bg-white rounded-xl shadow border border-slate-200 overflow-hidden flex flex-col">
+                <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <h2 class="font-bold text-slate-800 text-sm">รายการครุภัณฑ์ในระบบ (ทั้งหมด {{ assets|length }} รายการ)</h2>
+                    <!-- ปุ่มลบหลายรายการ -->
+                    <button id="bulkDeleteBtn" onclick="deleteSelectedAssets()" class="hidden bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow">
+                        🗑️ ลบที่เลือก (<span id="selectedCount">0</span>)
+                    </button>
+                </div>
+                <div class="overflow-x-auto flex-1 p-2">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 border-b text-xs font-semibold text-slate-600">
+                                <th class="p-3 w-10 text-center">
+                                    <input type="checkbox" id="selectAll" class="w-4 h-4 rounded text-blue-600 cursor-pointer">
+                                </th>
+                                <th class="p-3">เลขครุภัณฑ์ / ชื่ออุปกรณ์</th>
+                                <th class="p-3">ชนิด / สถานที่</th>
+                                <th class="p-3">ผู้ถือครอง</th>
+                                <th class="p-3">สถานะ</th>
+                                <th class="p-3 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for a in assets %}
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-3 text-center">
+                                    <input type="checkbox" class="asset-checkbox w-4 h-4 rounded text-blue-600 cursor-pointer" value="{{ a.asset_id }}">
+                                </td>
+                                <td class="p-3">
+                                    <div class="font-semibold text-blue-800">{{ a.asset_id }}</div>
+                                    <div class="text-slate-800 font-medium">{{ a.asset_name }}</div>
+                                    <div class="text-xs text-slate-400">S/N: {{ a.serial_number or '-' }}</div>
+                                </td>
+                                <td class="p-3 text-xs text-slate-600">
+                                    <div class="font-semibold text-slate-700">{{ a.category or '-' }}</div>
+                                    <div class="text-slate-500">📍 {{ a.room or '-' }}</div>
+                                </td>
+                                <td class="p-3 text-xs">
+                                    {% if a.assigned_user_id %}
+                                        <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded font-semibold border border-blue-200">👤 {{ a.assigned_user_id }}</span>
+                                    {% else %}
+                                        <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded font-medium">🏢 ส่วนกลางประจำห้อง</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-3 text-xs">
+                                    {% if a.status == 'ปกติ' %}
+                                        <span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-semibold">🟢 ปกติ</span>
+                                    {% elif a.status == 'ส่งซ่อม' %}
+                                        <span class="bg-amber-100 text-amber-700 px-2 py-1 rounded font-semibold">🟡 ส่งซ่อม</span>
+                                    {% elif a.status == 'ชำรุด' %}
+                                        <span class="bg-rose-100 text-rose-700 px-2 py-1 rounded font-semibold">🔴 ชำรุด</span>
+                                    {% else %}
+                                        <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded font-semibold">⚪ {{ a.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-3 text-center space-x-1">
+                                    <button onclick="openEditModal(this)" data-asset='{{ a|tojson }}' class="bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white px-2.5 py-1 rounded text-xs transition font-semibold">แก้ไข</button>
+                                    <button onclick="deleteAsset('{{ a.asset_id }}')" class="bg-rose-100 hover:bg-rose-500 text-rose-700 hover:text-white px-2.5 py-1 rounded text-xs transition font-semibold">ลบ</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal แก้ไขข้อมูลครุภัณฑ์ -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h2 class="font-bold text-slate-800 text-base border-b pb-2">✏️ แก้ไขข้อมูลครุภัณฑ์</h2>
+            <form id="editAssetForm" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">หมายเลขครุภัณฑ์ (แก้ไขไม่ได้)</label>
+                    <input type="text" id="editAssetId" readonly class="w-full p-2 border rounded-lg text-sm bg-slate-100 text-slate-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่ออุปกรณ์ / ยี่ห้อรุ่น</label>
+                    <input type="text" id="editAssetName" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ชนิดอุปกรณ์</label>
+                    <select id="editCategory" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                        {% for c in categories %}
+                            <option value="{{ c }}">{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">วันหมดอายุประกัน</label>
+                    <input type="text" id="editWarranty" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Serial Number (S/N)</label>
+                    <input type="text" id="editSerialNumber" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">สถานที่ตั้ง / ห้อง</label>
+                    <select id="editRoom" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                        {% for r in rooms %}
+                            <option value="{{ r }}">{{ r }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ผู้ถือครอง / รูปแบบการใช้งาน</label>
+                    <select id="editAssignedUser" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600 bg-slate-50">
+                        <option value="">🏢 อุปกรณ์ส่วนกลางประจำห้อง (ทุกคนในห้องแจ้งซ่อมได้)</option>
+                        {% for u in users %}
+                            <option value="{{ u.user_id }}">👤 {{ u.fullname }} ({{ u.position or u.user_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">สถานะ</label>
+                    <select id="editStatus" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                        <option value="ปกติ">🟢 ปกติ</option>
+                        <option value="ส่งซ่อม">🟡 ส่งซ่อม</option>
+                        <option value="ชำรุด">🔴 ชำรุด</option>
+                        <option value="จำหน่าย">⚪ จำหน่ายออก</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-lg text-sm font-semibold transition">บันทึกการแก้ไข</button>
+                    <button type="button" onclick="closeEditModal()" class="flex-1 bg-slate-300 hover:bg-slate-400 text-slate-800 py-2 rounded-lg text-sm font-semibold transition">ยกเลิก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ระบบ Checkbox และ Bulk Delete
+        const selectAll = document.getElementById('selectAll');
+        const assetCheckboxes = document.querySelectorAll('.asset-checkbox');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        const selectedCount = document.getElementById('selectedCount');
+
+        function updateBulkDeleteUI() {
+            const checkedBoxes = document.querySelectorAll('.asset-checkbox:checked');
+            const count = checkedBoxes.length;
+            selectedCount.innerText = count;
+            if (count > 0) {
+                bulkDeleteBtn.classList.remove('hidden');
+            } else {
+                bulkDeleteBtn.classList.add('hidden');
+            }
+        }
+
+        if (selectAll) {
+            selectAll.addEventListener('change', (e) => {
+                assetCheckboxes.forEach(cb => cb.checked = e.target.checked);
+                updateBulkDeleteUI();
+            });
+        }
+
+        assetCheckboxes.forEach(cb => {
+            cb.addEventListener('change', () => {
+                updateBulkDeleteUI();
+                const total = assetCheckboxes.length;
+                const checked = document.querySelectorAll('.asset-checkbox:checked').length;
+                if (selectAll) selectAll.checked = (total === checked && total > 0);
+            });
+        });
+
+        async function deleteSelectedAssets() {
+            const checkedBoxes = document.querySelectorAll('.asset-checkbox:checked');
+            const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            if (selectedIds.length === 0) return;
+            if (!confirm(`คุณต้องการลบครุภัณฑ์ที่เลือกจำนวน ${selectedIds.length} รายการ ใช่หรือไม่?`)) return;
+
+            try {
+                const res = await fetch('/api/assets/bulk-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ asset_ids: selectedIds })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) window.location.reload();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            }
+        }
+
+        // เพิ่มครุภัณฑ์
+        document.getElementById('addAssetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                asset_id: document.getElementById('addAssetId').value.trim(),
+                asset_name: document.getElementById('addAssetName').value.trim(),
+                category: document.getElementById('addCategory').value,
+                warranty: document.getElementById('addWarranty').value.trim(),
+                serial_number: document.getElementById('addSerialNumber').value.trim(),
+                room: document.getElementById('addRoom').value,
+                assigned_user_id: document.getElementById('addAssignedUser').value,
+                status: document.getElementById('addStatus').value
+            };
+
+            try {
+                const res = await fetch('/api/assets/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) window.location.reload();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            }
+        });
+
+        // นำเข้า Excel (อัปเดตใหม่ให้ดักจับ Error แม่นยำขึ้น)
+        document.getElementById('importForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('excelFile');
+            if (fileInput.files.length === 0) return alert('กรุณาเลือกไฟล์ก่อน');
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const res = await fetch('/api/assets/import', { method: 'POST', body: formData });
+                const contentType = res.headers.get("content-type");
+                
+                if (contentType && contentType.includes("application/json")) {
+                    const result = await res.json();
+                    alert(result.message);
+                    if (result.success) window.location.reload();
+                } else {
+                    const text = await res.text();
+                    alert(`เซิร์ฟเวอร์ขัดข้อง (HTTP ${res.status}): โปรดตรวจสอบ Terminal`);
+                    console.error("Server Error:", text);
+                }
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย: ' + err.message);
+            }
+        });
+
+        // ลบครุภัณฑ์เดี่ยว
+        async function deleteAsset(assetId) {
+            if (!confirm(`ยืนยันการลบครุภัณฑ์รหัส ${assetId} ใช่หรือไม่?`)) return;
+            try {
+                const res = await fetch('/api/assets/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ asset_id: assetId })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) window.location.reload();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+            }
+        }
+
+        function openEditModal(button) {
+            const asset = JSON.parse(button.getAttribute('data-asset'));
+            document.getElementById('editAssetId').value = asset.asset_id;
+            document.getElementById('editAssetName').value = asset.asset_name;
+            document.getElementById('editCategory').value = asset.category || '';
+            document.getElementById('editWarranty').value = asset.warranty || '';
+            document.getElementById('editSerialNumber').value = asset.serial_number || '';
+            document.getElementById('editRoom').value = asset.room || '';
+            document.getElementById('editAssignedUser').value = asset.assigned_user_id || '';
+            document.getElementById('editStatus').value = asset.status || 'ปกติ';
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        document.getElementById('editAssetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                asset_id: document.getElementById('editAssetId').value,
+                asset_name: document.getElementById('editAssetName').value.trim(),
+                category: document.getElementById('editCategory').value,
+                warranty: document.getElementById('editWarranty').value.trim(),
+                serial_number: document.getElementById('editSerialNumber').value.trim(),
+                room: document.getElementById('editRoom').value,
+                assigned_user_id: document.getElementById('editAssignedUser').value,
+                status: document.getElementById('editStatus').value
+            };
+
+            try {
+                const res = await fetch('/api/assets/edit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) window.location.reload();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            }
+        });
+    </script>
+</body>
+</html>

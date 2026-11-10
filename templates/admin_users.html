@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการผู้ใช้งาน - AI Smart IT Helpdesk</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style> body { font-family: 'Sarabun', sans-serif; } </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col">
+
+    <header class="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center">
+        <div>
+            <h1 class="text-lg font-bold flex items-center gap-2">👥 ระบบจัดการข้อมูลผู้ใช้งาน (ศาลจังหวัดเพชรบูรณ์)</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="/admin/export-users-excel" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg transition font-semibold">📊 ส่งออก Excel</a>
+            <a href="/admin/assets" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition">📦 จัดการครุภัณฑ์</a>
+            <a href="/admin/knowledge-base" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition">📚 จัดการคู่มือ KB</a>
+            <a href="/admin" class="text-xs bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg transition">⬅️ แดชบอร์ด</a>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <div class="space-y-6">
+                <!-- กล่องเพิ่มข้อมูลทีละคน -->
+                <div class="bg-white p-5 rounded-xl shadow border border-slate-200">
+                    <h2 class="font-bold text-slate-800 text-sm border-b pb-2 mb-4">➕ เพิ่มผู้ใช้งานใหม่ (Manual)</h2>
+                    <form id="addUserForm" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสบุคลากร (User ID - ตัวเลข 8 หลัก)</label>
+                            <input type="text" id="addUserId" pattern="\d{8}" title="กรุณากรอกตัวเลข 8 หลัก" placeholder="เช่น 10001234" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่าน (Password)</label>
+                            <input type="text" id="addPassword" pattern="(?=.*[a-zA-Z\W]).{8,}" title="รหัสผ่านอย่างน้อย 8 ตัว และมีตัวอักษรหรืออักขระพิเศษผสม" placeholder="อย่างน้อย 8 ตัวอักษร..." required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อ - นามสกุล</label>
+                            <input type="text" id="addFullname" placeholder="ชื่อ นามสกุล" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ตำแหน่ง</label>
+                            <input type="text" id="addPosition" placeholder="เช่น เจ้าพนักงานศาล" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">แผนก</label>
+                            <select id="addDepartment" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                                {% for d in departments %}
+                                    <option value="{{ d }}">{{ d }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ห้องที่อยู่</label>
+                            <select id="addRoom" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                                {% for r in rooms %}
+                                    <option value="{{ r }}">{{ r }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ระดับสิทธิ์ (Role)</label>
+                            <select id="addRole" class="w-full p-2 border rounded-lg text-sm font-semibold text-slate-700 bg-slate-50 focus:ring-2 focus:ring-amber-600">
+                                <option value="user">ผู้ใช้งานทั่วไป (User)</option>
+                                <option value="admin">ผู้ดูแลระบบ (Admin)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold transition mt-2">บันทึกข้อมูล</button>
+                    </form>
+                </div>
+
+                <!-- กล่องอิมพอร์ต Excel -->
+                <div class="bg-white p-5 rounded-xl shadow border border-slate-200 border-t-4 border-t-emerald-500">
+                    <h2 class="font-bold text-slate-800 text-sm border-b pb-2 mb-2">📊 นำเข้าจากไฟล์ Excel (Bulk Import)</h2>
+                    <p class="text-xs text-slate-500 mb-4">ฟอร์แมต: คอลัมน์ A(รหัส), B(รหัสผ่าน), C(ชื่อ), D(แผนก) *แถวแรกเป็น Header</p>
+                    <form id="importForm" class="space-y-3">
+                        <input type="file" id="excelFile" accept=".xlsx, .xls" required class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2">
+                            นำเข้าข้อมูล
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ฝั่งขวา: ตารางรายชื่อผู้ใช้งาน -->
+            <div class="md:col-span-2 bg-white rounded-xl shadow border border-slate-200 overflow-hidden flex flex-col">
+                <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <h2 class="font-bold text-slate-800 text-sm">รายชื่อผู้ใช้งานระบบ (ทั้งหมด {{ users|length }} คน)</h2>
+                    <!-- ปุ่มลบหลายรายการ -->
+                    <button id="bulkDeleteBtn" onclick="deleteSelectedUsers()" class="hidden bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow">
+                        🗑️ ลบที่เลือก (<span id="selectedCount">0</span>)
+                    </button>
+                </div>
+                <div class="overflow-x-auto flex-1 p-2">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 border-b text-xs font-semibold text-slate-600">
+                                <th class="p-3 w-10 text-center">
+                                    <input type="checkbox" id="selectAll" class="w-4 h-4 rounded text-blue-600 cursor-pointer">
+                                </th>
+                                <th class="p-3">รหัส / ชื่อ-นามสกุล</th>
+                                <th class="p-3">ตำแหน่ง / แผนก</th>
+                                <th class="p-3">สิทธิ์</th>
+                                <th class="p-3 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for u in users %}
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-3 text-center">
+                                    <input type="checkbox" class="user-checkbox w-4 h-4 rounded text-blue-600 cursor-pointer" value="{{ u.user_id }}">
+                                </td>
+                                <td class="p-3">
+                                    <div class="font-semibold text-blue-800">{{ u.user_id }}</div>
+                                    <div class="text-slate-800 font-medium">{{ u.fullname }}</div>
+                                </td>
+                                <td class="p-3 text-xs text-slate-600">
+                                    <div class="font-semibold text-slate-700">{{ u.position or '-' }}</div>
+                                    <div>{{ u.department }}</div>
+                                    <div class="text-slate-500 mt-1">📍 {{ u.room or '-' }}</div>
+                                </td>
+                                <td class="p-3 text-xs">
+                                    {% if u.role == 'admin' %}
+                                        <span class="bg-purple-100 text-purple-700 px-2 py-1 rounded font-semibold">Admin</span>
+                                    {% else %}
+                                        <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded font-semibold">User</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-3 text-center space-x-1">
+                                    <button onclick="openEditModal(this)" data-user='{{ u|tojson }}' class="bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white px-2.5 py-1 rounded text-xs transition font-semibold">
+                                        แก้ไข
+                                    </button>
+                                    <button onclick="deleteUser('{{ u.user_id }}')" class="bg-rose-100 hover:bg-rose-500 text-rose-700 hover:text-white px-2.5 py-1 rounded text-xs transition font-semibold">
+                                        ลบ
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal แก้ไขข้อมูลผู้ใช้งาน -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6 space-y-4">
+            <h2 class="font-bold text-slate-800 text-base border-b pb-2">✏️ แก้ไขข้อมูลผู้ใช้งาน</h2>
+            <form id="editUserForm" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสบุคลากร (แก้ไขไม่ได้)</label>
+                    <input type="text" id="editUserId" readonly class="w-full p-2 border rounded-lg text-sm bg-slate-100 text-slate-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ตั้งรหัสผ่านใหม่ (ปล่อยว่างถ้าไม่เปลี่ยน)</label>
+                    <input type="text" id="editPassword" placeholder="กรอกรหัสผ่านใหม่..." class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อ-นามสกุล</label>
+                    <input type="text" id="editFullName" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ตำแหน่ง</label>
+                    <input type="text" id="editPosition" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">แผนก</label>
+                    <select id="editDepartment" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                        {% for d in departments %}
+                            <option value="{{ d }}">{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ห้องที่อยู่</label>
+                        <select id="editRoom" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                            {% for r in rooms %}
+                                <option value="{{ r }}">{{ r }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ระดับสิทธิ์ (Role)</label>
+                        <select id="editRole" class="w-full p-2 border rounded-lg text-sm font-semibold text-slate-700 bg-slate-50 focus:ring-2 focus:ring-amber-600">
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-lg text-sm font-semibold transition">บันทึกการแก้ไข</button>
+                    <button type="button" onclick="closeEditModal()" class="flex-1 bg-slate-300 hover:bg-slate-400 text-slate-800 py-2 rounded-lg text-sm font-semibold transition">ยกเลิก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ระบบ Checkbox และ Bulk Delete
+        const selectAll = document.getElementById('selectAll');
+        const userCheckboxes = document.querySelectorAll('.user-checkbox');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        const selectedCount = document.getElementById('selectedCount');
+
+        function updateBulkDeleteUI() {
+            const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+            const count = checkedBoxes.length;
+            selectedCount.innerText = count;
+            if (count > 0) {
+                bulkDeleteBtn.classList.remove('hidden');
+            } else {
+                bulkDeleteBtn.classList.add('hidden');
+            }
+        }
+
+        if (selectAll) {
+            selectAll.addEventListener('change', (e) => {
+                userCheckboxes.forEach(cb => cb.checked = e.target.checked);
+                updateBulkDeleteUI();
+            });
+        }
+
+        userCheckboxes.forEach(cb => {
+            cb.addEventListener('change', () => {
+                updateBulkDeleteUI();
+                const total = userCheckboxes.length;
+                const checked = document.querySelectorAll('.user-checkbox:checked').length;
+                if (selectAll) selectAll.checked = (total === checked && total > 0);
+            });
+        });
+
+        async function deleteSelectedUsers() {
+            const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+            const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            if (selectedIds.length === 0) return;
+            if (!confirm(`คุณต้องการลบผู้ใช้งานที่เลือกจำนวน ${selectedIds.length} รายการ ใช่หรือไม่?`)) return;
+
+            try {
+                const res = await fetch('/api/users/bulk-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_ids: selectedIds })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) window.location.reload();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            }
+        }
+
+        // เพิ่มผู้ใช้งาน
+        document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                user_id: document.getElementById('addUserId').value.trim(),
+                password: document.getElementById('addPassword').value.trim(),
+                fullname: document.getElementById('addFullname').value.trim(),
+                position: document.getElementById('addPosition').value.trim(),
+                department: document.getElementById('addDepartment').value,
+                room: document.getElementById('addRoom').value,
+                role: document.getElementById('addRole').value
+            };
+
+            try {
+                const res = await fetch('/api/users/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) window.location.reload();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            }
+        });
+
+        // นำเข้า Excel
+        document.getElementById('importForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('excelFile');
+            if (fileInput.files.length === 0) return alert('กรุณาเลือกไฟล์ก่อน');
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerText;
+            btn.innerText = '⏳ กำลังนำเข้าข้อมูล...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/users/import', { method: 'POST', body: formData });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) window.location.reload();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // ลบผู้ใช้งานเดี่ยว
+        async function deleteUser(userId) {
+            if (!confirm(`ยืนยันการลบบัญชีรหัส ${userId} ใช่หรือไม่?`)) return;
+            try {
+                const res = await fetch('/api/users/delete', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) window.location.reload();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+            }
+        }
+
+        function openEditModal(button) {
+            const user = JSON.parse(button.getAttribute('data-user'));
+            document.getElementById('editUserId').value = user.user_id;
+            document.getElementById('editFullName').value = user.fullname;
+            document.getElementById('editPosition').value = user.position || '';
+            document.getElementById('editDepartment').value = user.department;
+            document.getElementById('editRoom').value = user.room || '';
+            document.getElementById('editRole').value = user.role || 'user';
+            document.getElementById('editPassword').value = '';
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                user_id: document.getElementById('editUserId').value,
+                password: document.getElementById('editPassword').value.trim(),
+                fullname: document.getElementById('editFullName').value.trim(),
+                position: document.getElementById('editPosition').value.trim(),
+                department: document.getElementById('editDepartment').value,
+                room: document.getElementById('editRoom').value,
+                role: document.getElementById('editRole').value
+            };
+
+            try {
+                const res = await fetch('/api/users/edit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) window.location.reload();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            }
+        });
+    </script>
+</body>
+</html>

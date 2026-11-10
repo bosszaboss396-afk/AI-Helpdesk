@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แดชบอร์ดผู้ดูแลระบบ - AI Smart IT Helpdesk</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- นำเข้า FontAwesome สำหรับแสดงไอคอนในระบบ -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style> body { font-family: 'Sarabun', sans-serif; } </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header Navbar -->
+    <header class="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center flex-wrap gap-2">
+        <div>
+            <h1 class="text-lg font-bold flex items-center gap-2">🛡️ แดชบอร์ดผู้ดูแลระบบ IT ศาลจังหวัดเพชรบูรณ์</h1>
+            <p class="text-xs text-slate-400">ผู้ใช้งาน: {{ session.fullname }} ({{ session.department }})</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <!-- 📌 ปุ่มพิมพ์รายงาน -->
+            <a href="/admin/print-report?start_date={{ start_date or '' }}&end_date={{ end_date or '' }}&search_text={{ search_text or '' }}" target="_blank" class="text-xs bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-lg transition font-semibold flex items-center gap-1 shadow"><i class="fas fa-file-pdf"></i> พิมพ์รายงาน A4</a>
+            
+            <!-- 📌 ปุ่มเปิดหน้าแจ้งปัญหา (AI) -->
+            <a href="/chat" target="_blank" class="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg transition font-semibold flex items-center gap-1 shadow">🤖 หน้าแจ้งปัญหา (AI)</a>
+            
+            <a href="/admin/users" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition shadow">👥 จัดการผู้ใช้งาน</a>
+            <a href="/admin/assets" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition shadow">📦 จัดการครุภัณฑ์</a>
+            <a href="/admin/knowledge-base" class="text-xs bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg transition shadow">📚 จัดการคู่มือ KB</a>
+            <a href="/admin/settings" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition shadow">⚙️ ตั้งค่าระบบ</a>
+            <a href="/admin/export-excel" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg transition shadow">📊 ส่งออก Excel</a>
+            <a href="/logout" class="text-xs bg-rose-700 hover:bg-rose-800 text-white px-3 py-1.5 rounded-lg font-semibold transition shadow">ออกจากระบบ</a>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-5 rounded-xl shadow border-l-4 border-amber-500">
+                <div class="text-slate-500 text-sm font-semibold">⏳ เคสรอรับเรื่อง (Pending)</div>
+                <div class="text-3xl font-bold text-amber-500 mt-2">{{ pending }} รายการ</div>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow border-l-4 border-blue-500">
+                <div class="text-slate-500 text-sm font-semibold">🛠️ กำลังดำเนินการ (In Progress)</div>
+                <div class="text-3xl font-bold text-blue-500 mt-2">{{ in_progress }} รายการ</div>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow border-l-4 border-emerald-500">
+                <div class="text-slate-500 text-sm font-semibold">✅ ซ่อมเสร็จสิ้น (Completed)</div>
+                <div class="text-3xl font-bold text-emerald-500 mt-2">{{ completed }} รายการ</div>
+            </div>
+        </div>
+
+        <!-- Tickets Table Card -->
+        <div class="bg-white rounded-xl shadow border border-slate-200 overflow-hidden">
+            
+            <!-- 📌 Filter Form -->
+            <div class="p-4 bg-white border-b border-slate-200">
+                <form method="GET" action="/admin" class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ตั้งแต่วันที่:</label>
+                        <input type="date" name="start_date" class="border p-1.5 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value="{{ start_date or '' }}">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ถึงวันที่:</label>
+                        <input type="date" name="end_date" class="border p-1.5 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value="{{ end_date or '' }}">
+                    </div>
+                    <div class="flex-1 min-w-[250px]">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ค้นหา (เลขครุภัณฑ์ / ชื่ออุปกรณ์ / เลข Ticket):</label>
+                        <div class="relative">
+                            <input type="text" name="search_text" class="w-full border p-1.5 pl-8 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="พิมพ์คำที่ต้องการค้นหา..." value="{{ search_text or '' }}">
+                            <i class="fas fa-search absolute left-2.5 top-2 text-slate-400"></i>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition flex items-center gap-1 shadow">ค้นหา</button>
+                        <a href="/admin" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm px-4 py-1.5 rounded-lg font-semibold transition text-center flex items-center gap-1 shadow">ล้างค่า</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Header ตารางพร้อม 3 แท็บสถานะ -->
+            <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center flex-wrap gap-2">
+                <h2 class="font-bold text-slate-800 text-sm">รายการคิวงานแจ้งซ่อม (FIFO)</h2>
+                
+                <div class="bg-slate-200/70 p-1 rounded-xl flex gap-1 text-xs">
+                    <button id="tabPending" onclick="switchTab('pending')" class="px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-white text-slate-800 shadow">
+                        ⏳ รอรับเคส (<span id="cntPending">{{ pending }}</span>)
+                    </button>
+                    <button id="tabProgress" onclick="switchTab('progress')" class="px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900">
+                        🛠️ กำลังดำเนินการ (<span id="cntProgress">{{ in_progress }}</span>)
+                    </button>
+                    <button id="tabCompleted" onclick="switchTab('completed')" class="px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900">
+                        ✅ เสร็จสิ้นแล้ว (<span id="cntCompleted">{{ completed }}</span>)
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto p-2">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 border-b text-xs font-semibold text-slate-600">
+                            <th class="p-3">เลข Ticket</th>
+                            <th class="p-3">วันเวลา</th>
+                            <th class="p-3">ผู้แจ้ง / แผนก</th>
+                            <th class="p-3">อุปกรณ์ / สถานที่</th>
+                            <th class="p-3">อาการเสีย</th>
+                            <th class="p-3 text-center">รูปภาพ</th>
+                            <th class="p-3">สถานะ</th>
+                            <th class="p-3">ช่างผู้ดูแล</th>
+                            <th class="p-3 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100" id="ticketTableBody">
+                        {% if tickets %}
+                            {% for t in tickets %}
+                            <tr class="ticket-row hover:bg-slate-50 transition" data-status="{{ t.status }}">
+                                <td class="p-3 font-semibold text-amber-700">{{ t.ticket_id }}</td>
+                                <td class="p-3 text-slate-500 text-xs">{{ t.created_at }}</td>
+                                <td class="p-3">
+                                    <div class="font-medium text-slate-800">{{ t.fullname }}</div>
+                                    <div class="text-xs text-slate-400">{{ t.department }}</div>
+                                </td>
+                                <td class="p-3">
+                                    <div class="font-medium text-slate-800">{{ t.asset_name }}</div>
+                                    <div>
+                                        <span class="text-[11px] text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded font-semibold inline-block my-0.5">🏷️ ชนิด: {{ t.category or 'ทั่วไป' }}</span>
+                                    </div>
+                                    <div class="text-[11px] text-blue-600 font-semibold my-0.5">📦 รหัส: {{ t.asset_id }}</div>
+                                    <div class="text-xs text-slate-400">📍 {{ t.room }}</div>
+                                </td>
+                                <td class="p-3 text-slate-700">{{ t.issue_description }}</td>
+                                
+                                <!-- 📌 คอลัมน์แสดงปุ่มดูรูปภาพ -->
+                                <td class="p-3 text-center align-middle">
+                                    {% if t.image_data %}
+                                        <button data-image="{{ t.image_data }}" onclick="showImageModal(this.getAttribute('data-image'))" class="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 border border-blue-200 px-2 py-1 rounded text-[11px] font-semibold transition mx-auto flex items-center justify-center gap-1 shadow-sm w-[70px]">
+                                            <i class="fas fa-image"></i> ดูรูป
+                                        </button>
+                                    {% else %}
+                                        <span class="text-[11px] text-slate-400">-</span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="p-3 text-xs">
+                                    {% if t.status == 'pending' %}
+                                        <span class="bg-amber-100 text-amber-700 px-2 py-1 rounded font-semibold">⏳ รอรับเคส</span>
+                                    {% elif t.status == 'in_progress' %}
+                                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded font-semibold">🛠️ กำลังซ่อม</span>
+                                    {% elif t.status == 'completed' %}
+                                        <span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-semibold">✅ ซ่อมเสร็จ</span>
+                                    {% else %}
+                                        <span class="bg-rose-100 text-rose-700 px-2 py-1 rounded font-semibold">❌ ซ่อมไม่ได้</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-3 text-slate-600">{{ t.assigned_admin or 'ยังไม่มอบหมาย' }}</td>
+                                <td class="p-3 text-center flex gap-1 justify-center">
+                                    <button onclick="viewAssetHistory('{{ t.asset_id }}', '{{ t.asset_name }}')" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1.5 rounded text-xs transition font-semibold flex items-center gap-1 shadow">
+                                        🕒 ประวัติ
+                                    </button>
+                                    <button onclick="openUpdateModal('{{ t.ticket_id }}', '{{ t.status }}', '{{ t.assigned_admin }}', '{{ t.repair_note }}')" class="bg-slate-800 hover:bg-slate-900 text-white px-2 py-1.5 rounded text-xs transition font-semibold shadow">
+                                        อัปเดต
+                                    </button>
+                                    <button onclick="deleteTicket('{{ t.ticket_id }}')" class="bg-rose-600 hover:bg-rose-700 text-white px-2 py-1.5 rounded text-xs transition font-semibold shadow">
+                                        🗑️ ลบ
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr id="emptyRow">
+                                <!-- ปรับ colspan เป็น 9 เนื่องจากเพิ่มคอลัมน์รูปภาพ -->
+                                <td colspan="9" class="p-6 text-center text-slate-500">
+                                    {% if start_date or end_date or search_text %}
+                                        ไม่มีรายการแจ้งซ่อมที่ตรงกับเงื่อนไขการค้นหา
+                                    {% else %}
+                                        ไม่มีรายการแจ้งซ่อมในระบบ
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal ดูรูปภาพ (Image Modal) -->
+    <div id="imageModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity opacity-0">
+        <div class="bg-white rounded-xl shadow-2xl p-4 max-w-2xl w-full mx-4 relative transform scale-95 transition-transform duration-300">
+            <!-- ปุ่มปิด Modal -->
+            <button onclick="closeImageModal()" class="absolute top-3 right-3 text-slate-400 hover:text-rose-500 transition-colors bg-slate-100 hover:bg-rose-100 rounded-full w-8 h-8 flex items-center justify-center">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+            
+            <h3 class="text-base font-bold text-slate-800 mb-3 border-b pb-2 flex items-center gap-2">
+                <i class="fas fa-image text-blue-600"></i> รูปภาพอาการเสีย
+            </h3>
+            
+            <!-- พื้นที่แสดงรูปภาพ -->
+            <div class="flex justify-center items-center bg-slate-50 p-2 rounded-lg border border-slate-200 min-h-[200px]">
+                <img id="modalImage" src="" alt="รูปภาพแจ้งซ่อม" class="max-w-full max-h-[60vh] object-contain rounded shadow-sm">
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal ประวัติการซ่อม -->
+    <div id="historyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-lg max-w-3xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                    🕒 ประวัติอุปกรณ์: <span id="historyAssetName" class="text-blue-700"></span>
+                </h2>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-rose-500 font-bold text-2xl transition">&times;</button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
+                    <div class="flex items-center gap-2">
+                        <div class="bg-amber-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow"><i class="fas fa-bullhorn"></i></div>
+                        <div class="text-sm text-amber-700 font-bold">ถูกแจ้งซ่อมทั้งหมด</div>
+                    </div>
+                    <div class="text-right">
+                        <span id="statReported" class="text-2xl font-black text-amber-600">0</span>
+                        <span class="text-xs font-bold text-slate-600">ครั้ง</span>
+                    </div>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
+                    <div class="flex items-center gap-2">
+                        <div class="bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow"><i class="fas fa-check"></i></div>
+                        <div class="text-sm text-emerald-700 font-bold">ซ่อมสำเร็จแล้ว</div>
+                    </div>
+                    <div class="text-right">
+                        <span id="statCompleted" class="text-2xl font-black text-emerald-600">0</span>
+                        <span class="text-xs font-bold text-slate-600">ครั้ง</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="historyLoading" class="text-center py-6 text-slate-500 text-sm hidden">กำลังโหลดข้อมูลประวัติ...</div>
+            <div id="historyError" class="text-center py-6 text-rose-500 font-semibold text-sm hidden">เกิดข้อผิดพลาดในการดึงข้อมูล</div>
+            
+            <div id="historyContent" class="hidden">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 border-b text-xs font-semibold text-slate-600">
+                            <th class="p-3">สถานะ / เลข Ticket</th>
+                            <th class="p-3">วันที่แจ้ง</th>
+                            <th class="p-3">อาการเสีย</th>
+                            <th class="p-3">วิธีแก้ไข / หมายเหตุ</th>
+                            <th class="p-3">ช่างผู้ดูแล</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody" class="divide-y divide-slate-200 text-xs"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal อัปเดต Ticket -->
+    <div id="updateModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6 space-y-4">
+            <h2 class="font-bold text-slate-800 text-base border-b pb-2">✏️ อัปเดตสถานะเคสซ่อม</h2>
+            <form id="updateForm" class="space-y-3">
+                <input type="hidden" id="modal_ticket_id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">สถานะการซ่อม:</label>
+                    <select id="modal_status" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
+                        <option value="pending">⏳ รอรับเคส</option>
+                        <option value="in_progress">🛠️ กำลังดำเนินการ</option>
+                        <option value="completed">✅ ซ่อมสำเร็จ (บันทึกประวัติ)</option>
+                        <option value="failed">❌ ไม่สามารถซ่อมได้</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ช่างผู้รับผิดชอบ:</label>
+                    <input type="text" id="modal_admin" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">บันทึกวิธีแก้ไข / หมายเหตุ:</label>
+                    <textarea id="modal_note" rows="3" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600"></textarea>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold transition">บันทึก</button>
+                    <button type="button" onclick="closeUpdateModal()" class="flex-1 bg-slate-300 hover:bg-slate-400 text-slate-800 py-2 rounded-lg text-sm font-semibold transition">ยกเลิก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ----------------------------------------------------
+        // 📌 ฟังก์ชันจัดการ Image Modal (ดูรูปภาพ)
+        // ----------------------------------------------------
+        function showImageModal(imageBase64) {
+            const modal = document.getElementById('imageModal');
+            const img = document.getElementById('modalImage');
+            
+            img.src = imageBase64;
+            modal.classList.remove('hidden');
+            
+            // ทำให้ Effect ค่อยๆ โชว์ทำงาน
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+                modal.querySelector('div').classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            const img = document.getElementById('modalImage');
+            
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                img.src = ''; // เคลียร์รูปภาพออกจากหน่วยความจำ
+            }, 300);
+        }
+
+        // ----------------------------------------------------
+        // 📌 ฟังก์ชันสลับแท็บคิวงาน
+        // ----------------------------------------------------
+        function switchTab(tabType) {
+            const tabPending = document.getElementById('tabPending');
+            const tabProgress = document.getElementById('tabProgress');
+            const tabCompleted = document.getElementById('tabCompleted');
+            const rows = document.querySelectorAll('.ticket-row');
+
+            // Reset สไตล์ปุ่มทั้งหมด
+            [tabPending, tabProgress, tabCompleted].forEach(tab => {
+                tab.className = "px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900";
+            });
+
+            if (tabType === 'pending') {
+                tabPending.className = "px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-white text-slate-800 shadow";
+                rows.forEach(row => {
+                    row.style.display = (row.getAttribute('data-status') === 'pending') ? '' : 'none';
+                });
+            } else if (tabType === 'progress') {
+                tabProgress.className = "px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-white text-slate-800 shadow";
+                rows.forEach(row => {
+                    row.style.display = (row.getAttribute('data-status') === 'in_progress') ? '' : 'none';
+                });
+            } else {
+                tabCompleted.className = "px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-white text-slate-800 shadow";
+                rows.forEach(row => {
+                    const status = row.getAttribute('data-status');
+                    row.style.display = (status === 'completed' || status === 'failed') ? '' : 'none';
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            switchTab('pending');
+        });
+
+        // ----------------------------------------------------
+        // 📌 ระบบ Modal ประวัติการซ่อม
+        // ----------------------------------------------------
+        const historyModal = document.getElementById('historyModal');
+        const historyLoading = document.getElementById('historyLoading');
+        const historyError = document.getElementById('historyError');
+        const historyContent = document.getElementById('historyContent');
+        const historyTableBody = document.getElementById('historyTableBody');
+
+        async function viewAssetHistory(assetId, assetName) {
+            document.getElementById('historyAssetName').innerText = assetName;
+            document.getElementById('statReported').innerText = '...';
+            document.getElementById('statCompleted').innerText = '...';
+            
+            historyModal.classList.remove('hidden');
+            historyLoading.classList.remove('hidden');
+            historyError.classList.add('hidden');
+            historyContent.classList.add('hidden');
+
+            try {
+                const res = await fetch(`/api/asset-history/${assetId}`);
+                const data = await res.json();
+                historyLoading.classList.add('hidden');
+
+                if (data.history && data.history.length > 0) {
+                    document.getElementById('statReported').innerText = data.total_reported;
+                    document.getElementById('statCompleted').innerText = data.total_completed;
+                    
+                    historyTableBody.innerHTML = '';
+                    data.history.forEach(log => {
+                        let statusBadge = '';
+                        if (log.status === 'pending') statusBadge = '<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-[10px] font-semibold">⏳ รอรับเคส</span>';
+                        else if (log.status === 'in_progress') statusBadge = '<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-semibold">🛠️ กำลังซ่อม</span>';
+                        else if (log.status === 'completed') statusBadge = '<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-semibold">✅ ซ่อมเสร็จ</span>';
+                        else statusBadge = '<span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded text-[10px] font-semibold">❌ ซ่อมไม่ได้</span>';
+
+                        historyTableBody.innerHTML += `
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-3 font-semibold text-slate-800">
+                                    <div class="mb-1">${statusBadge}</div>
+                                    <div class="text-amber-700">${log.ticket_id}</div>
+                                </td>
+                                <td class="p-3 text-slate-500">${log.created_at}</td>
+                                <td class="p-3 text-slate-800 font-medium">${log.issue_description}</td>
+                                <td class="p-3 text-emerald-700 bg-emerald-50/30">${log.repair_note || '-'}</td>
+                                <td class="p-3 text-slate-600 font-semibold">${log.assigned_admin || '-'}</td>
+                            </tr>
+                        `;
+                    });
+                    historyContent.classList.remove('hidden');
+                } else {
+                    document.getElementById('statReported').innerText = '0';
+                    document.getElementById('statCompleted').innerText = '0';
+                    historyError.innerText = 'อุปกรณ์ชิ้นนี้ยังไม่เคยมีประวัติการถูกแจ้งซ่อมในระบบ';
+                    historyError.classList.remove('hidden');
+                }
+            } catch (err) {
+                historyLoading.classList.add('hidden');
+                historyError.innerText = 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์';
+                historyError.classList.remove('hidden');
+            }
+        }
+
+        function closeHistoryModal() { historyModal.classList.add('hidden'); }
+
+        // ----------------------------------------------------
+        // 📌 ระบบ Modal อัปเดต Ticket
+        // ----------------------------------------------------
+        const updateModal = document.getElementById('updateModal');
+        function openUpdateModal(id, status, admin, note) {
+            document.getElementById('modal_ticket_id').value = id;
+            document.getElementById('modal_status').value = status;
+            document.getElementById('modal_admin').value = (admin && admin !== 'None') ? admin : '';
+            document.getElementById('modal_note').value = (note && note !== 'None') ? note : '';
+            updateModal.classList.remove('hidden');
+        }
+        function closeUpdateModal() { updateModal.classList.add('hidden'); }
+
+        document.getElementById('updateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const ticket_id = document.getElementById('modal_ticket_id').value;
+            const status = document.getElementById('modal_status').value;
+            const assigned_admin = document.getElementById('modal_admin').value;
+            const repair_note = document.getElementById('modal_note').value;
+
+            try {
+                const res = await fetch('/api/update-ticket', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticket_id, status, assigned_admin, repair_note })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('อัปเดตสถานะเคสเรียบร้อยแล้ว');
+                    location.reload();
+                } else {
+                    alert('เกิดข้อผิดพลาดในการอัปเดต');
+                }
+            } catch(err) { alert('การเชื่อมต่อล้มเหลว'); }
+        });
+
+        // ----------------------------------------------------
+        // 📌 ระบบลบรายการแจ้งซ่อม (Delete Ticket)
+        // ----------------------------------------------------
+        async function deleteTicket(ticketId) {
+            if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบรายการแจ้งซ่อมรหัส ${ticketId} ?\n\n⚠️ การลบนี้จะนำข้อมูลออกจากระบบอย่างถาวรและไม่สามารถกู้คืนได้`)) {
+                try {
+                    const res = await fetch('/api/delete-ticket', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ticket_id: ticketId })
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        alert('ลบรายการแจ้งซ่อมออกจากระบบเรียบร้อยแล้ว');
+                        location.reload();
+                    } else {
+                        alert(data.message || 'เกิดข้อผิดพลาดในการลบ');
+                    }
+                } catch(err) { 
+                    alert('การเชื่อมต่อล้มเหลว ไม่สามารถลบข้อมูลได้'); 
+                }
+            }
+        }
+    </script>
+</body>
+</html>

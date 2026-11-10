@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตั้งค่าข้อมูลพื้นฐาน - AI Smart IT Helpdesk</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style> body { font-family: 'Sarabun', sans-serif; } </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col">
+
+    <header class="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center">
+        <div>
+            <h1 class="text-lg font-bold flex items-center gap-2">⚙️ ตั้งค่าข้อมูลพื้นฐาน (Master Data - ศาลจังหวัดเพชรบูรณ์)</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="/admin/export-settings-excel" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg transition font-semibold">📊 ส่งออก Excel</a>
+            <a href="/admin/knowledge-base" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition">📚 จัดการคู่มือ KB</a>
+            <a href="/admin/assets" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition">📦 หน้าครุภัณฑ์</a>
+            <a href="/admin/users" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition">👥 หน้าผู้ใช้งาน</a>
+            <a href="/admin" class="text-xs bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg transition">⬅️ แดชบอร์ด</a>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- 1. จัดการรายชื่อแผนก -->
+            <div class="bg-white p-5 rounded-xl shadow border border-slate-200">
+                <h2 class="font-bold text-slate-800 text-sm border-b pb-2 mb-4 flex items-center gap-2">🏢 จัดการรายชื่อแผนก</h2>
+                <form id="deptForm" class="flex gap-2 mb-4">
+                    <input type="text" id="deptName" placeholder="เช่น ส่วนช่วยพิจารณาคดี" required class="flex-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">เพิ่ม</button>
+                </form>
+                <ul class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                    {% for d in departments %}
+                    <li class="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                        <span class="text-sm font-medium text-slate-700">{{ d.dept_name }}</span>
+                        <div class="flex gap-1">
+                            <button onclick="editItem('department', '{{ d.id }}', '{{ d.dept_name }}')" class="bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white px-2.5 py-1 rounded text-xs font-semibold transition">แก้ไข</button>
+                            <button onclick="deleteItem('department', '{{ d.id }}')" class="bg-rose-100 hover:bg-rose-500 text-rose-700 hover:text-white px-2.5 py-1 rounded text-xs font-semibold transition">ลบ</button>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- 2. จัดการสถานที่ / ห้อง -->
+            <div class="bg-white p-5 rounded-xl shadow border border-slate-200">
+                <h2 class="font-bold text-slate-800 text-sm border-b pb-2 mb-4 flex items-center gap-2">📍 จัดการสถานที่ / ห้อง</h2>
+                <form id="roomForm" class="flex gap-2 mb-4">
+                    <input type="text" id="roomName" placeholder="เช่น ห้องพิจารณาคดี 2" required class="flex-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-600">
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">เพิ่ม</button>
+                </form>
+                <ul class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                    {% for r in rooms %}
+                    <li class="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                        <span class="text-sm font-medium text-slate-700">{{ r.room_name }}</span>
+                        <div class="flex gap-1">
+                            <button onclick="editItem('room', '{{ r.id }}', '{{ r.room_name }}')" class="bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white px-2.5 py-1 rounded text-xs font-semibold transition">แก้ไข</button>
+                            <button onclick="deleteItem('room', '{{ r.id }}')" class="bg-rose-100 hover:bg-rose-500 text-rose-700 hover:text-white px-2.5 py-1 rounded text-xs font-semibold transition">ลบ</button>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- 3. จัดการชนิดอุปกรณ์ -->
+            <div class="bg-white p-5 rounded-xl shadow border border-slate-200">
+                <h2 class="font-bold text-slate-800 text-sm border-b pb-2 mb-4 flex items-center gap-2">🖥️ จัดการชนิดอุปกรณ์</h2>
+                <form id="catForm" class="flex gap-2 mb-4">
+                    <input type="text" id="catName" placeholder="เช่น เครื่องพิมพ์ (Printer)" required class="flex-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-600">
+                    <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">เพิ่ม</button>
+                </form>
+                <ul class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                    {% for c in categories %}
+                    <li class="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                        <span class="text-sm font-medium text-slate-700">{{ c.category_name }}</span>
+                        <div class="flex gap-1">
+                            <button onclick="editItem('category', '{{ c.id }}', '{{ c.category_name }}')" class="bg-amber-100 hover:bg-amber-500 text-amber-700 hover:text-white px-2.5 py-1 rounded text-xs font-semibold transition">แก้ไข</button>
+                            <button onclick="deleteItem('category', '{{ c.id }}')" class="bg-rose-100 hover:bg-rose-500 text-rose-700 hover:text-white px-2.5 py-1 rounded text-xs font-semibold transition">ลบ</button>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        async function addItem(type, nameInputId) {
+            const input = document.getElementById(nameInputId);
+            const name = input.value.trim();
+            if (!name) return;
+
+            try {
+                const res = await fetch('/api/settings/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: type, name: name })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            }
+        }
+
+        document.getElementById('deptForm').addEventListener('submit', (e) => { e.preventDefault(); addItem('department', 'deptName'); });
+        document.getElementById('roomForm').addEventListener('submit', (e) => { e.preventDefault(); addItem('room', 'roomName'); });
+        document.getElementById('catForm').addEventListener('submit', (e) => { e.preventDefault(); addItem('category', 'catName'); });
+
+        // ฟังก์ชันแก้ไขข้อมูล (ขึ้นป๊อปอัปให้พิมพ์แก้ไข)
+        async function editItem(type, id, currentName) {
+            const newName = prompt('แก้ไขชื่อรายการ:', currentName);
+            if (newName === null) return; // กดยกเลิก
+            const trimmedName = newName.trim();
+            if (!trimmedName || trimmedName === currentName) return;
+
+            try {
+                const res = await fetch('/api/settings/edit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: type, id: id, name: trimmedName })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            }
+        }
+
+        async function deleteItem(type, id) {
+            if (!confirm('ยืนยันการลบข้อมูลนี้ใช่หรือไม่?')) return;
+            try {
+                const res = await fetch('/api/settings/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: type, id: id })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+            }
+        }
+    </script>
+
+    <!-- การ์ดจัดการลิงก์ Google Form -->
+<div class="bg-white p-6 rounded-xl shadow border border-slate-200 mb-6">
+    <h2 class="font-bold text-slate-800 text-base border-b pb-2 mb-4">🔗 จัดการลิงก์ Google Form ภายนอก</h2>
+    <form id="formUrlForm" class="space-y-3">
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">URL ของ Google Form (สำหรับแสดงปุ่มที่หน้า Login):</label>
+            <div class="flex gap-2">
+                <input type="url" id="googleFormUrlInput" value="{{ google_form_url }}" placeholder="https://forms.gle/..." required class="flex-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-amber-600">
+                <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">บันทึกลิงก์</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById('formUrlForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const url = document.getElementById('googleFormUrlInput').value.trim();
+
+        try {
+            const res = await fetch('/api/settings/update-form-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) location.reload();
+        } catch (err) {
+            alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+        }
+    });
+</script>
+
+</body>
+</html>
